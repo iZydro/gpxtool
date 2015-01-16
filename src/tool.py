@@ -52,8 +52,8 @@ class simpleapp_tk(Tkinter.Tk):
         self.coords = (41.406271,2.212483,17)
         self.entryVariable.set(str(self.coords[0]) + "," + str(self.coords[1]) + "," + str(self.coords[2]))
 
-        self.canvas_width = 256
-        self.canvas_height = 256
+        self.canvas_width = 500
+        self.canvas_height = 500
         self.background = Tkinter.Canvas(self, width=self.canvas_width, height=self.canvas_height)
         self.background.grid(column=0,row=2,columnspan=2)
         self.UpdateCoords(self.entryVariable.get().split(","))
@@ -100,8 +100,8 @@ class simpleapp_tk(Tkinter.Tk):
         tminx, tminy = self.mercator.MetersToTile(mx, my, tz )
         wgsbounds = self.mercator.TileLatLonBounds(tminx, tminy, tz)
 
-        scale_x = (wgsbounds[2] - wgsbounds[0]) / self.canvas_width
-        scale_y = (wgsbounds[3] - wgsbounds[1]) / self.canvas_height
+        scale_x = (wgsbounds[2] - wgsbounds[0]) / 256 # self.canvas_width
+        scale_y = (wgsbounds[3] - wgsbounds[1]) / 256 # self.canvas_height
 
         old_coords = self.entryVariable.get().split(",")
         new_coords = [0, 0, 0]
