@@ -123,7 +123,6 @@ class GPXTool(Tkinter.Tk):
         new_coordinates[2] = old_coordinates[2]
         self.update_coordinates(new_coordinates)
         self.set_entry_variable(new_coordinates)
-#        self.entryVariable.set(str(new_coordinates[0]) + "," + str(new_coordinates[1]) + "," + str(new_coordinates[2]))
 
     def update_coordinates(self, coordinates):
 
