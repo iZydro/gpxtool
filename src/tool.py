@@ -6,6 +6,7 @@ import os
 import urllib
 
 import globalmaptiles
+from Tkinter import Tk
 
 class simpleapp_tk(Tkinter.Tk):
     
@@ -27,8 +28,6 @@ class simpleapp_tk(Tkinter.Tk):
         self.parent = parent
         self.initialize()
         self.bind("<Key>", self.key)
-        self.bind("<ButtonPress-1>", self.press_button)
-        self.bind("<ButtonRelease-1>", self.release_button)
     
 
     def initialize(self):
@@ -60,12 +59,16 @@ class simpleapp_tk(Tkinter.Tk):
         
         self.background.create_rectangle(100, 100, 20, 20, fill="#ff0000")
         
+        self.background.bind("<ButtonPress-1>", self.press_button)
+        self.background.bind("<ButtonRelease-1>", self.release_button)
+        self.background.bind("<B1-Motion>", self.motion_button)
+
         self.grid_columnconfigure(0,weight=1)
         self.resizable(True,False)
         self.update()
         self.geometry(self.geometry())       
-        self.entry.focus_set()
-        self.entry.selection_range(0, Tkinter.END)
+        #self.entry.focus_set()
+        #self.entry.selection_range(0, Tkinter.END)
         
         self.coords = [0, 0, 0]
         self.moved = [0, 0]
@@ -74,15 +77,25 @@ class simpleapp_tk(Tkinter.Tk):
 
     def key(self, event):
         print ("pressed", repr(event.char))
+        if event.char == "+":
+            self.ChangeZoom(1)
+        elif event.char == "-":
+            self.ChangeZoom(-1)
     
     def press_button(self, event):
-        #frame.focus_set()
         print ("clicked at", event.x, event.y)
         self.coords[0] = event.y
         self.coords[1] = event.x
+        self.background.focus_set()
+
+    def motion_button(self, event):
+        print ("motion at", event.x, event.y)
+        self.moved[0] = event.y - self.coords[0]
+        self.moved[1] = - (event.x - self.coords[1])
+        self.background.delete(Tkinter.ALL)
+        self.background.create_image(250 - self.moved[1], 250 + self.moved[0], image=self.image)
 
     def release_button(self, event):
-        #frame.focus_set()
         print ("clicked at", event.x, event.y)
         self.moved[0] = event.y - self.coords[0]
         self.moved[1] = - (event.x - self.coords[1])
@@ -114,20 +127,30 @@ class simpleapp_tk(Tkinter.Tk):
 # 0.0000160 coords, 100 pixels
         
     def UpdateCoords(self, coords):
-        self.entry.focus_set()
-        self.entry.selection_range(0, Tkinter.END)
+        #self.entry.focus_set()
+        #self.entry.selection_range(0, Tkinter.END)
         
         #coords_text = self.entryVariable.get().split(",")
         request = "http://maps.google.com/maps/api/staticmap?center=" + str(coords[0]) + "," + str(coords[1]) + "&zoom=" + str(coords[2]) +"&size=500x500&format=gif&maptype=hybrid&sensor=false"
+        print(request)
         urllib.urlretrieve(request, "caca.gif")
         image = Tkinter.PhotoImage(file="./caca.gif")
         self.image = image
         self.background.create_image(250, 250, image=self.image)
 
+    def ChangeZoom(self, offset):
+        new_coords = self.entryVariable.get().split(",")
+        zoom = int(new_coords[2])
+        zoom += offset
+        new_coords[2] = zoom
+        self.UpdateCoords(new_coords)
+        self.entryVariable.set(str(new_coords[0]) + "," + str(new_coords[1]) + "," + str(new_coords[2]))
+
         
     def OnButtonClick(self):
         self.labelVariable.set( self.entryVariable.get()+" (You clicked the button)" )
         self.UpdateCoords(self.entryVariable.get().split(","))
+        print("Focus get " + self.focus_get())
 
     def OnPressEnter(self,event):
         self.labelVariable.set( self.entryVariable.get()+" (You pressed Enter)" )
@@ -136,6 +159,6 @@ class simpleapp_tk(Tkinter.Tk):
 if __name__ == "__main__":
     app = simpleapp_tk(None)
     os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Python" to true' ''')
-    app.title('my application')
+    app.title('Zydro GPX tool')
     
     app.mainloop()
