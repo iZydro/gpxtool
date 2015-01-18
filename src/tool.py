@@ -127,6 +127,13 @@ class GPXTool(Tkinter.Tk):
         self.scale_x = (wgs_bounds[2] - wgs_bounds[0]) / 256
         self.scale_y = (wgs_bounds[3] - wgs_bounds[1]) / 256
 
+        self.left = lon - (self.canvas_width / 2) * self.scale_y
+        self.right = lon + (self.canvas_width / 2) * self.scale_y
+        self.top = lat - (self.canvas_height / 2) * self.scale_x
+        self.bottom = lat + (self.canvas_height / 2) * self.scale_x
+
+        print ("Bounds:", self.left, self.right, self.top, self.bottom)
+
     def release_button(self, event):
         print ("clicked at", event.x, event.y)
         self.moved[0] = event.y - self.coordinates[0]
@@ -139,13 +146,6 @@ class GPXTool(Tkinter.Tk):
         new_coordinates[0] = float(old_coordinates[0]) + float(self.moved[0]) * self.scale_x
         new_coordinates[1] = float(old_coordinates[1]) + float(self.moved[1]) * self.scale_y
         new_coordinates[2] = old_coordinates[2]
-
-        self.left = new_coordinates[1] - (self.canvas_width / 2) * self.scale_x
-        self.right = new_coordinates[1] + (self.canvas_width / 2) * self.scale_x
-        self.top = new_coordinates[0] - (self.canvas_height / 2) * self.scale_y
-        self.bottom = new_coordinates[0] + (self.canvas_height / 2) * self.scale_y
-
-        print (new_coordinates[1], self.left, self.right, self.top, self.bottom)
 
         self.set_entry_variable(new_coordinates)
         self.update_coordinates(new_coordinates)
@@ -199,8 +199,8 @@ class GPXTool(Tkinter.Tk):
             lon = float(point["lon"])
             lat = float(point["lat"])
             print (lon, old_lon)
-            #if lon > self.left and lon < self.right and lat > self.top and lat < self.bottom:
-            if True:
+            if lon > self.left and lon < self.right and lat > self.top and lat < self.bottom:
+            #if True:
                 x_offset = self.canvas_width / 2 + ( (lon - old_lon) / self.scale_y )
                 y_offset = self.canvas_height / 2 + ( (old_lat - lat) / self.scale_x )
 
