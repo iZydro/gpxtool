@@ -60,12 +60,22 @@ class GPXTool(Tkinter.Tk):
     mercator = None
     points = []
 
+    lat_box = None
+    lon_box = None
+
     def __init__(self, parent):
         Tkinter.Tk.__init__(self, parent)
 
         self.parent = parent
 
         self.grid()
+
+        self.columnconfigure(0, pad=0)
+        self.columnconfigure(1, pad=0)
+        self.rowconfigure(0, pad=0)
+        self.rowconfigure(1, pad=0)
+        self.rowconfigure(2, pad=0)
+        self.rowconfigure(3, pad=0)
 
         self.bind("<Key>", self.key)
 
@@ -95,10 +105,26 @@ class GPXTool(Tkinter.Tk):
         self.zoom = 17
         self.set_entry_variable(self.wgs84_coordinates, self.zoom)
 
+        distance_box = Tkinter.Label(self, height=1, width=64, bg="#00ff00", text="Total:" + str(self.gpx_read.calculate_total_distance()))
+        distance_box.config(anchor="w")
+        distance_box.grid(column=0, row=2, pady=0, padx=0)
+
+        points_box = Tkinter.Label(self, height=1, width=64, bg="#ff0000", text="Points:" + str(len(self.gpx_read.points)))
+        points_box.config(anchor="w")
+        points_box.grid(column=0, row=3, pady=0, padx=0)
+
+        self.lat_box = Tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Lat:" + "dummy")
+        self.lat_box.config(anchor="w")
+        self.lat_box.grid(column=0, row=4, pady=0, padx=0)
+
+        self.lon_box = Tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Lon:" + "dummy")
+        self.lon_box.config(anchor="w")
+        self.lon_box.grid(column=0, row=5, pady=0, padx=0)
+
         self.canvas_width = 640
         self.canvas_height = 640
         self.background = Tkinter.Canvas(self, width=self.canvas_width, height=self.canvas_height)
-        self.background.grid(column=0, row=2, columnspan=2)
+        self.background.grid(column=1, row=2, rowspan=100)
         self.update_wgs84_coordinates_from_text_and_download_map(self.entryVariable.get().split(","))
 
         self.calculate_scale()
@@ -144,8 +170,17 @@ class GPXTool(Tkinter.Tk):
 
     def motion_button(self, event):
         print ("motion at", event.x, event.y)
-        self.moved_canvas_coordinates.y = event.y - self.pressed_canvas_coordinates.y
+        self.moved_canvas_coordinates.y = + (event.y - self.pressed_canvas_coordinates.y)
         self.moved_canvas_coordinates.x = - (event.x - self.pressed_canvas_coordinates.x)
+        old_coordinates = WGS84Coordinates(self.wgs84_coordinates.lat, self.wgs84_coordinates.lon)
+
+        new_wsg84_coordinates = WGS84Coordinates(0, 0)
+        new_wsg84_coordinates.lon = old_coordinates.lon + float(self.moved_canvas_coordinates.x) * self.scale_y
+        new_wsg84_coordinates.lat = old_coordinates.lat + float(self.moved_canvas_coordinates.y) * self.scale_x
+
+        self.lat_box.config(text="Lat:" + str(new_wsg84_coordinates.lat))
+        self.lon_box.config(text="Lon:" + str(new_wsg84_coordinates.lon))
+
         self.background.delete(Tkinter.ALL)
         self.background.create_image(self.canvas_width / 2 - self.moved_canvas_coordinates.x,
                                      self.canvas_height / 2 + self.moved_canvas_coordinates.y,
@@ -233,6 +268,9 @@ class GPXTool(Tkinter.Tk):
         self.image = image
         self.background.delete(Tkinter.ALL)
         self.background.create_image(self.canvas_width / 2, self.canvas_height / 2, image=self.image)
+
+#        self.lat_box.config(text=self.wgs84_coordinates.lat)
+#        self.lon_box.config(text=self.wgs84_coordinates.lon)
 
     def change_zoom(self, offset):
         new_coordinates = self.entryVariable.get().split(",")
