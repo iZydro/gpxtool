@@ -1,25 +1,41 @@
 from xml.dom import minidom
 
+class GPXRead:
 
-def read_points():
+    points = None
 
-    xml_data_file = "/Users/isidro/Desktop/mine/tmp_track/activity_161545981.gpx"
-    xml_data_file_content = open(xml_data_file, "rb").read()
+    def __init__(self):
+        """
 
-    xml_data = minidom.parseString(xml_data_file_content)
+        :rtype : None
+        """
+        self.points = []
 
-    item_list = xml_data.getElementsByTagName('trkpt')
+    def read_points(self):
 
-    points = []
+        xml_data_file = "/Users/isidro/Desktop/mine/tmp_track/activity_161545981.gpx"
+        xml_data_file_content = open(xml_data_file, "rb").read()
 
-    for item in item_list:
-        lat = item.attributes["lat"].value
-        lon = item.attributes["lon"].value
-        print ("lat:" + lat + " - lon:" + lon)
-        points.append({"lat": lat, "lon": lon})
+        xml_data = minidom.parseString(xml_data_file_content)
 
-    return points
+        item_list = xml_data.getElementsByTagName('trkpt')
+
+        for item in item_list:
+            lat = item.attributes["lat"].value
+            lon = item.attributes["lon"].value
+            self.points.append({"lat": lat, "lon": lon})
+
+        return self.points
+
+    def get_starting_point(self):
+        """
+        :rtype : dict
+        """
+
+        return self.points[0]
+
 
 if __name__ == "__main__":
 
-    read_points()
+    gpx_read = GPXRead()
+    gpx_read.read_points()

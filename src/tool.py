@@ -53,11 +53,10 @@ class GPXTool(Tkinter.Tk):
     wgs84_coordinates = None
     zoom = 1
 
-    moved = []
+    canvas_width = 640
+    canvas_height = 640
 
-    canvas_width = 256
-    canvas_height = 256
-
+    gpx_read = None
     mercator = None
     points = []
 
@@ -85,7 +84,14 @@ class GPXTool(Tkinter.Tk):
                               anchor="w", fg="white", bg="blue")
         label.grid(column=0, row=1, columnspan=2, sticky='EW')
 
-        self.wgs84_coordinates = WGS84Coordinates(41.3727642595768, 2.1506272070109844)
+        self.mercator = globalmaptiles.GlobalMercator()
+
+        self.gpx_read = gpxread.GPXRead()
+        self.points = self.gpx_read.read_points()
+
+        # Center the map on the initial coordinates of the track
+        starting_point = self.gpx_read.get_starting_point()
+        self.wgs84_coordinates = WGS84Coordinates(starting_point["lat"], starting_point["lon"])
         self.zoom = 17
         self.set_entry_variable(self.wgs84_coordinates, self.zoom)
 
@@ -93,11 +99,8 @@ class GPXTool(Tkinter.Tk):
         self.canvas_height = 640
         self.background = Tkinter.Canvas(self, width=self.canvas_width, height=self.canvas_height)
         self.background.grid(column=0, row=2, columnspan=2)
-        self.update_wgs84_coordinates_from_text(self.entryVariable.get().split(","))
+        self.update_wgs84_coordinates_from_text_and_download_map(self.entryVariable.get().split(","))
 
-        self.mercator = globalmaptiles.GlobalMercator()
-
-        self.points = gpxread.read_points()
         self.calculate_scale()
         self.draw_points()
 
@@ -115,7 +118,6 @@ class GPXTool(Tkinter.Tk):
         self.canvas_coordinates = CanvasCoordinates(0, 0)
         self.pressed_canvas_coordinates = CanvasCoordinates(0, 0)
         self.moved_canvas_coordinates = CanvasCoordinates(0, 0)
-        self.moved = [0, 0]
         self.top_left = [0, 0]
         self.bottom_right = [0, 0]
 
@@ -142,11 +144,11 @@ class GPXTool(Tkinter.Tk):
 
     def motion_button(self, event):
         print ("motion at", event.x, event.y)
-        self.moved[0] = event.y - self.pressed_canvas_coordinates.y
-        self.moved[1] = - (event.x - self.pressed_canvas_coordinates.x)
+        self.moved_canvas_coordinates.y = event.y - self.pressed_canvas_coordinates.y
+        self.moved_canvas_coordinates.x = - (event.x - self.pressed_canvas_coordinates.x)
         self.background.delete(Tkinter.ALL)
-        self.background.create_image(self.canvas_width / 2 - self.moved[1],
-                                     self.canvas_height / 2 + self.moved[0],
+        self.background.create_image(self.canvas_width / 2 - self.moved_canvas_coordinates.x,
+                                     self.canvas_height / 2 + self.moved_canvas_coordinates.y,
                                      image=self.image)
 
     def release_button(self, event):
@@ -161,7 +163,7 @@ class GPXTool(Tkinter.Tk):
         new_wsg84_coordinates.lat = old_coordinates.lat + float(self.moved_canvas_coordinates.y) * self.scale_x
 
         self.set_entry_variable(new_wsg84_coordinates, self.zoom)
-        self.update_wgs84_coordinates(new_wsg84_coordinates, self.zoom)
+        self.update_wgs84_coordinates_and_download_map(new_wsg84_coordinates, self.zoom)
         self.calculate_scale()
         self.draw_points()
 
@@ -177,19 +179,16 @@ class GPXTool(Tkinter.Tk):
         new_wsg84_coordinates.lat = old_coordinates.lat + float(self.moved_canvas_coordinates.y) * self.scale_x
 
         self.set_entry_variable(new_wsg84_coordinates, self.zoom)
-        self.update_wgs84_coordinates(new_wsg84_coordinates, self.zoom)
+        self.update_wgs84_coordinates_and_download_map(new_wsg84_coordinates, self.zoom)
         self.calculate_scale()
         self.draw_points()
 
     def calculate_scale(self):
         old_coordinates = self.entryVariable.get().split(",")
-        print(old_coordinates)
         lat = float(old_coordinates[0])
         lon = float(old_coordinates[1])
         tz = float(old_coordinates[2])
         mx, my = self.mercator.LatLonToMeters(lat, lon)
-        print ("Spherical Mercator (ESPG:900913) coordinates for lat/lon: ")
-        print (mx, my)
         current_tile_x, current_tile_y = self.mercator.MetersToTile(mx, my, tz)
         wgs_bounds = self.mercator.TileLatLonBounds(current_tile_x, current_tile_y, tz)
 
@@ -201,14 +200,12 @@ class GPXTool(Tkinter.Tk):
         self.top = lat - (self.canvas_height / 2) * self.scale_x
         self.bottom = lat + (self.canvas_height / 2) * self.scale_x
 
-        print ("Bounds:", self.left, self.right, self.top, self.bottom)
-
-    def update_wgs84_coordinates(self, wsg84_coordinates, zoom):
+    def update_wgs84_coordinates_and_download_map(self, wsg84_coordinates, zoom):
 
         self.wgs84_coordinates = wsg84_coordinates
         self.zoom = zoom
 
-        self.update_wgs84_coordinates_from_text(
+        self.update_wgs84_coordinates_from_text_and_download_map(
             [
                 str(wsg84_coordinates.lat),
                 str(wsg84_coordinates.lon),
@@ -216,7 +213,7 @@ class GPXTool(Tkinter.Tk):
             ]
         )
 
-    def update_wgs84_coordinates_from_text(self, text_array):
+    def update_wgs84_coordinates_from_text_and_download_map(self, text_array):
 
         self.wgs84_coordinates.lat = float(text_array[0])
         self.wgs84_coordinates.lon = float(text_array[1])
@@ -234,6 +231,7 @@ class GPXTool(Tkinter.Tk):
         urllib.urlretrieve(request, "caca.gif")
         image = Tkinter.PhotoImage(file="./caca.gif")
         self.image = image
+        self.background.delete(Tkinter.ALL)
         self.background.create_image(self.canvas_width / 2, self.canvas_height / 2, image=self.image)
 
     def change_zoom(self, offset):
@@ -242,23 +240,23 @@ class GPXTool(Tkinter.Tk):
         zoom += offset
         new_coordinates[2] = zoom
         self.set_entry_variable_from_text(new_coordinates)
-        self.update_wgs84_coordinates_from_text(new_coordinates)
+        self.update_wgs84_coordinates_from_text_and_download_map(new_coordinates)
+        self.calculate_scale()
         self.draw_points()
 
     def on_button_click(self):
         self.labelVariable.set(self.entryVariable.get() + " (You clicked the button)")
-        self.update_wgs84_coordinates_from_text(self.entryVariable.get().split(","))
+        self.update_wgs84_coordinates_from_text_and_download_map(self.entryVariable.get().split(","))
+        self.calculate_scale()
         self.draw_points()
 
     def on_press_enter(self, event):
         self.labelVariable.set(self.entryVariable.get() + " (You pressed Enter)" + event.char)
-        self.update_wgs84_coordinates_from_text(self.entryVariable.get().split(","))
+        self.update_wgs84_coordinates_from_text_and_download_map(self.entryVariable.get().split(","))
+        self.calculate_scale()
         self.draw_points()
 
     def draw_points(self):
-
-        self.calculate_scale()
-
         old_coordinates = self.entryVariable.get().split(",")
         old_lat = float(old_coordinates[0])
         old_lon = float(old_coordinates[1])
