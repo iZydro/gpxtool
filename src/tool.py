@@ -1,9 +1,9 @@
 #!/usr/bin/python
 # -*- coding: iso-8859-1 -*-
 
-import Tkinter
+import tkinter
 import os
-import urllib
+import urllib.request
 
 import globalmaptiles
 import gpxread
@@ -35,7 +35,7 @@ class CanvasCoordinates():
         return self.x, self.y
 
 
-class GPXTool(Tkinter.Tk):
+class GPXTool(tkinter.Tk):
 
     image = None
     background = None
@@ -64,7 +64,7 @@ class GPXTool(Tkinter.Tk):
     lon_box = None
 
     def __init__(self, parent):
-        Tkinter.Tk.__init__(self, parent)
+        tkinter.Tk.__init__(self, parent)
 
         self.parent = parent
 
@@ -79,18 +79,18 @@ class GPXTool(Tkinter.Tk):
 
         self.bind("<Key>", self.key)
 
-        self.entryVariable = Tkinter.StringVar()
-        self.entry = Tkinter.Entry(self, textvariable=self.entryVariable)
+        self.entryVariable = tkinter.StringVar()
+        self.entry = tkinter.Entry(self, textvariable=self.entryVariable)
         self.entry.grid(column=0, row=0, sticky='EW')
         self.entry.bind("<Return>", self.on_press_enter)
         self.entryVariable.set("Hello World")
 
-        button = Tkinter.Button(self, text="Click me !",
+        button = tkinter.Button(self, text="Click me !",
                                 command=self.on_button_click)
         button.grid(column=1, row=0)
 
-        self.labelVariable = Tkinter.StringVar()
-        label = Tkinter.Label(self, textvariable=self.labelVariable,
+        self.labelVariable = tkinter.StringVar()
+        label = tkinter.Label(self, textvariable=self.labelVariable,
                               anchor="w", fg="white", bg="blue")
         label.grid(column=0, row=1, columnspan=2, sticky='EW')
 
@@ -105,25 +105,25 @@ class GPXTool(Tkinter.Tk):
         self.zoom = 17
         self.set_entry_variable(self.wgs84_coordinates, self.zoom)
 
-        distance_box = Tkinter.Label(self, height=1, width=64, bg="#00ff00", text="Total:" + str(self.gpx_read.calculate_total_distance()))
+        distance_box = tkinter.Label(self, height=1, width=64, bg="#00ff00", text="Total:" + str(self.gpx_read.calculate_total_distance()))
         distance_box.config(anchor="w")
         distance_box.grid(column=0, row=2, pady=0, padx=0)
 
-        points_box = Tkinter.Label(self, height=1, width=64, bg="#ff0000", text="Points:" + str(len(self.gpx_read.points)))
+        points_box = tkinter.Label(self, height=1, width=64, bg="#ff0000", text="Points:" + str(len(self.gpx_read.points)))
         points_box.config(anchor="w")
         points_box.grid(column=0, row=3, pady=0, padx=0)
 
-        self.lat_box = Tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Lat:" + "dummy")
+        self.lat_box = tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Lat:" + "dummy")
         self.lat_box.config(anchor="w")
         self.lat_box.grid(column=0, row=4, pady=0, padx=0)
 
-        self.lon_box = Tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Lon:" + "dummy")
+        self.lon_box = tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Lon:" + "dummy")
         self.lon_box.config(anchor="w")
         self.lon_box.grid(column=0, row=5, pady=0, padx=0)
 
         self.canvas_width = 640
         self.canvas_height = 640
-        self.background = Tkinter.Canvas(self, width=self.canvas_width, height=self.canvas_height)
+        self.background = tkinter.Canvas(self, width=self.canvas_width, height=self.canvas_height)
         self.background.grid(column=1, row=2, rowspan=100)
         self.update_wgs84_coordinates_from_text_and_download_map(self.entryVariable.get().split(","))
 
@@ -181,7 +181,7 @@ class GPXTool(Tkinter.Tk):
         self.lat_box.config(text="Lat:" + str(new_wsg84_coordinates.lat))
         self.lon_box.config(text="Lon:" + str(new_wsg84_coordinates.lon))
 
-        self.background.delete(Tkinter.ALL)
+        self.background.delete(tkinter.ALL)
         self.background.create_image(self.canvas_width / 2 - self.moved_canvas_coordinates.x,
                                      self.canvas_height / 2 + self.moved_canvas_coordinates.y,
                                      image=self.image)
@@ -263,10 +263,10 @@ class GPXTool(Tkinter.Tk):
         request += "&format=gif&maptype=hybrid&sensor=false"
         request += "&key=AIzaSyBOP8yEyxoR2jYdYBf4th6hSgdaUeWsBx0"
         print(request)
-        urllib.urlretrieve(request, "caca.gif")
-        image = Tkinter.PhotoImage(file="./caca.gif")
+        urllib.request.urlretrieve(request, "caca.gif")
+        image = tkinter.PhotoImage(file="./caca.gif")
         self.image = image
-        self.background.delete(Tkinter.ALL)
+        self.background.delete(tkinter.ALL)
         self.background.create_image(self.canvas_width / 2, self.canvas_height / 2, image=self.image)
 
 #        self.lat_box.config(text=self.wgs84_coordinates.lat)

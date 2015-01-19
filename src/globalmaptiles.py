@@ -351,10 +351,10 @@ if __name__ == "__main__":
         
     def Usage(s = ""):
         print ("Usage: globalmaptiles.py [-profile 'mercator'|'geodetic'] zoomlevel lat lon [latmax lonmax]")
-        print
+        print ()
         if s:
             print (s)
-            print
+            print ()
         print ("This utility prints for given WGS84 lat/lon coordinates (or bounding box) the list of tiles")
         print ("covering specified area. Tiles are in the given 'profile' (default is Google Maps 'mercator')")
         print ("and in the given pyramid 'zoomlevel'.")
@@ -431,10 +431,10 @@ if __name__ == "__main__":
             quadkey = mercator.QuadTree(tx, ty, tz)
             print ("\tQuadkey:", quadkey, '(',int(quadkey, 4),')')
             bounds = mercator.TileBounds( tx, ty, tz)
-            print
+            print ()
             print ("\tEPSG:900913 Extent: ", bounds)
             wgsbounds = mercator.TileLatLonBounds( tx, ty, tz)
             print ("\tWGS84 Extent:", wgsbounds)
             print ("\tgdalwarp -ts 256 256 -te %s %s %s %s %s %s_%s_%s.tif" % (
                 bounds[0], bounds[1], bounds[2], bounds[3], "<your-raster-file-in-epsg900913.ext>", tz, tx, ty))
-            print
+            print ()
