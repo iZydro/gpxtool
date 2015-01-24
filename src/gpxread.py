@@ -1,12 +1,14 @@
 from xml.dom import minidom
 import globalmaptiles
 import math
+import datetime
 
 
 class GPXPoint:
-    def __init__(self, lat, lon):
+    def __init__(self, lat, lon, time=None):
         self.lat = lat
         self.lon = lon
+        self.time = time
 
     def get_lat(self):
         return self.lat
@@ -31,7 +33,7 @@ class GPXRead:
 
     def read_points(self):
 
-        xml_data_file = "/Users/isidro/Desktop/mine/tmp_track/activity_161545981.gpx"
+        xml_data_file = "/Users/isidro/Desktop/mine/tmp_track/activity_37192771.gpx"
         xml_data_file_content = open(xml_data_file, "rb").read()
 
         xml_data = minidom.parseString(xml_data_file_content)
@@ -41,7 +43,8 @@ class GPXRead:
         for item in item_list:
             lat = float(item.attributes["lat"].value)
             lon = float(item.attributes["lon"].value)
-            self.points.append(GPXPoint(lat, lon))
+            time = datetime.datetime.strptime(item.getElementsByTagName('time')[0].childNodes[0].data, "%Y-%m-%dT%H:%M:%S.%fZ")
+            self.points.append(GPXPoint(lat, lon, time))
 
         return self.points
 
@@ -79,25 +82,55 @@ class GPXRead:
         # in your favorite set of units to get length.
         return arc * 6378135.0
 
+    def calculate_point_data(self, point):
+        lat = point.get_lat()
+        lon = point.get_lon()
+        time = point.time
+
+        index_point = self.points.index(point)
+        prev_point = self.points[index_point - 1]
+
+        last_lat = prev_point.get_lat()
+        last_lon = prev_point.get_lon()
+        last_time = prev_point.time
+
+        point_distance = self.distance_on_unit_sphere(lat, lon, last_lat, last_lon)
+        point_time = time - last_time
+
+        return point_time, point_distance
+
     def calculate_total_distance(self):
 
-        total_distance = 0
         point_distance = 0
+        total_distance = 0
+
+        point_time = 0
+        total_time = datetime.timedelta(0)
+
         num_point = 1
         last_lat = None
         last_lon = None
+        last_time = None
 
         for point in self.points:
-            lat = float(point.get_lat())
-            lon = float(point.get_lon())
+            lat = point.get_lat()
+            lon = point.get_lon()
+            time = point.time
             if last_lat:
                 point_distance = self.distance_on_unit_sphere(lat, lon, last_lat, last_lon)
                 # point_distance = (int(point_distance*10 + 0.5))/10.0
+                point_time = time - last_time
                 total_distance += point_distance
-            print("Point #" + str(num_point) + " => acc:" + str(total_distance) + " this:" + str(point_distance))
+                total_time += point_time
+                #print(point_time)
+            print("Point #" + str(num_point) + " => acc:" + str(total_distance) + " this:" + str(point_distance) + " time: " + str(total_time))
+
             last_lat = lat
             last_lon = lon
+            last_time = time
+
             num_point += 1
+
         print("Total distance: " + str(total_distance))
         return total_distance
 

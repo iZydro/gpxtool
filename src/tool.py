@@ -35,6 +35,12 @@ class GPXTool(tkinter.Tk):
 
     image = None
     background = None
+
+    distance_box = None
+    time_box = None
+    dist_box = None
+    speed_box = None
+
     panning = False
     top = 0
     left = 0
@@ -68,6 +74,12 @@ class GPXTool(tkinter.Tk):
     lon_box = None
 
     def __init__(self, parent):
+
+        try:
+            os.stat("../tmp")
+        except:
+            os.mkdir("../tmp")
+
         tkinter.Tk.__init__(self, parent)
 
         self.parent = parent
@@ -116,10 +128,10 @@ class GPXTool(tkinter.Tk):
         self.zoom = 17
         self.set_entry_variable(self.wgs84_coordinates, self.zoom)
 
-        distance_box = tkinter.Label(self, height=1, width=64, bg="#00ff00")
-        distance_box.config(text="Total:" + str(self.gpx_read.calculate_total_distance()))
-        distance_box.config(anchor="w")
-        distance_box.grid(column=0, row=2, pady=0, padx=0)
+        self.distance_box = tkinter.Label(self, height=1, width=64, bg="#00ff00")
+        self.distance_box.config(text="Total:" + str(self.gpx_read.calculate_total_distance()))
+        self.distance_box.config(anchor="w")
+        self.distance_box.grid(column=0, row=2, pady=0, padx=0)
 
         points_box = tkinter.Label(self, height=1, width=64, bg="#ff0000")
         points_box.config(text="Points:" + str(len(self.gpx_read.points)))
@@ -133,6 +145,18 @@ class GPXTool(tkinter.Tk):
         self.lon_box = tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Lon:" + "dummy")
         self.lon_box.config(anchor="w")
         self.lon_box.grid(column=0, row=5, pady=0, padx=0)
+
+        self.time_box = tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Time:" + "dummy")
+        self.time_box.config(anchor="w")
+        self.time_box.grid(column=0, row=6, pady=0, padx=0)
+
+        self.dist_box = tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Dist:" + "dummy")
+        self.dist_box.config(anchor="w")
+        self.dist_box.grid(column=0, row=7, pady=0, padx=0)
+
+        self.speed_box = tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Speed:" + "dummy")
+        self.speed_box.config(anchor="w")
+        self.speed_box.grid(column=0, row=8, pady=0, padx=0)
 
         self.update_wgs84_coordinates_from_text_and_download_map(self.entryVariable.get().split(","))
 
@@ -211,7 +235,7 @@ class GPXTool(tkinter.Tk):
             self.moved_canvas_coordinates.y = - event.y
             self.moved_canvas_coordinates.x = + event.x
 
-            old_coordinates = WGS84Coordinates(self.bottom, self.left) # self.wgs84_coordinates.lat, self.wgs84_coordinates.lon)
+            old_coordinates = WGS84Coordinates(self.bottom, self.left)  # self.wgs84_coordinates.lat, self.wgs84_coordinates.lon)
 
             new_wsg84_coordinates = WGS84Coordinates(0, 0)
             new_wsg84_coordinates.lon = old_coordinates.lon + float(self.moved_canvas_coordinates.x) * self.scale_y
@@ -223,6 +247,9 @@ class GPXTool(tkinter.Tk):
             self.screen_point_selected.get_gpx_point().lon = new_wsg84_coordinates.lon
 
             self.screen_point_selected = self.draw_point(self.screen_point_selected.get_gpx_point())
+
+            total_distance = self.gpx_read.calculate_total_distance()
+            self.distance_box.config(text="Dist:" + str(total_distance))
 
     def release_button(self, event):
         print("released at", event.x, event.y)
@@ -259,7 +286,7 @@ class GPXTool(tkinter.Tk):
         self.draw_points()
 
     def motion(self, event):
-        print("simple motion at:", event.x, event.y)
+#        print("simple motion at:", event.x, event.y)
 
         screen_point_found = self.screen_points.point_at(event.x, event.y)
         if screen_point_found:
@@ -273,6 +300,10 @@ class GPXTool(tkinter.Tk):
         if screen_point_found:
             # Update current highlighted point
             self.screen_point_highlighted = screen_point_found
+            time, distance = self.gpx_read.calculate_point_data(screen_point_found.get_gpx_point())
+            self.dist_box.config(text="Dist:" + str(time))
+            self.time_box.config(text="Time:" + str(distance))
+            self.speed_box.config(text="Speed:" + str(distance / time.seconds) + "m/s")
 
         self.moved_canvas_coordinates.y = - event.y
         self.moved_canvas_coordinates.x = + event.x
@@ -331,8 +362,8 @@ class GPXTool(tkinter.Tk):
         request += "&format=gif&maptype=hybrid&sensor=false"
         request += "&key=AIzaSyBOP8yEyxoR2jYdYBf4th6hSgdaUeWsBx0"
         print(request)
-        urllib.request.urlretrieve(request, "caca.gif")
-        image = tkinter.PhotoImage(file="./caca.gif")
+        urllib.request.urlretrieve(request, "../tmp/caca.gif")
+        image = tkinter.PhotoImage(file="../tmp/caca.gif")
         self.image = image
         self.background.delete(tkinter.ALL)
         self.background.create_image(self.canvas_width / 2, self.canvas_height / 2, image=self.image)
