@@ -25,8 +25,8 @@ class GPXRead:
         item_list = xml_data.getElementsByTagName('trkpt')
 
         for item in item_list:
-            lat = item.attributes["lat"].value
-            lon = item.attributes["lon"].value
+            lat = float(item.attributes["lat"].value)
+            lon = float(item.attributes["lon"].value)
             self.points.append({"lat": lat, "lon": lon})
 
         return self.points
