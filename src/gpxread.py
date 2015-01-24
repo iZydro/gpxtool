@@ -3,15 +3,29 @@ import globalmaptiles
 import math
 
 
+class GPXPoint:
+    def __init__(self, lat, lon):
+        self.lat = lat
+        self.lon = lon
+
+    def get_lat(self):
+        return self.lat
+
+    def get_lon(self):
+        return self.lon
+
+    def set_lat(self, lat):
+        self.lat = lat
+
+    def set_lon(self, lon):
+        self.lon = lon
+
+
 class GPXRead:
     points = None
     mercator = None
 
     def __init__(self):
-        """
-
-        :rtype : None
-        """
         self.points = []
         self.mercator = globalmaptiles.GlobalMercator()
 
@@ -27,14 +41,11 @@ class GPXRead:
         for item in item_list:
             lat = float(item.attributes["lat"].value)
             lon = float(item.attributes["lon"].value)
-            self.points.append({"lat": lat, "lon": lon})
+            self.points.append(GPXPoint(lat, lon))
 
         return self.points
 
-    def get_starting_point(self):
-        """
-        :rtype : dict
-        """
+    def get_starting_point(self) -> GPXPoint:
 
         return self.points[0]
 
@@ -77,8 +88,8 @@ class GPXRead:
         last_lon = None
 
         for point in self.points:
-            lat = float(point["lat"])
-            lon = float(point["lon"])
+            lat = float(point.get_lat())
+            lon = float(point.get_lon())
             if last_lat:
                 point_distance = self.distance_on_unit_sphere(lat, lon, last_lat, last_lon)
                 # point_distance = (int(point_distance*10 + 0.5))/10.0

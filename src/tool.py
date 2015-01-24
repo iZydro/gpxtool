@@ -7,17 +7,15 @@ import urllib.request
 
 import globalmaptiles
 import gpxread
+from gpxread import GPXPoint
 import screen_points
 
 
 class WGS84Coordinates():
 
-    lat = 0
-    lon = 0
-
-    def __init__(self, val_lat, val_lon):
-        self.lat = val_lat
-        self.lon = val_lon
+    def __init__(self, lat, lon):
+        self.lat = lat
+        self.lon = lon
 
     def get_lat_lon(self):
         return self.lat, self.lon
@@ -25,12 +23,9 @@ class WGS84Coordinates():
 
 class CanvasCoordinates():
 
-    x = 0
-    y = 0
-
-    def __init__(self, val_x, val_y):
-        self.x = val_x
-        self.y = val_y
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
 
     def get_x_y(self):
         return self.x, self.y
@@ -49,8 +44,15 @@ class GPXTool(tkinter.Tk):
     scale_x = 0
     scale_y = 0
 
+    PAN_MODE = 0
+    MOVE_POINT_MODE = 1
+
     pressed_canvas_coordinates = None
     moved_canvas_coordinates = None
+    motion_mode = PAN_MODE
+    screen_point_selected = None
+    screen_point_highlighted = None
+
     wgs84_coordinates = None
     zoom = 1
 
@@ -60,7 +62,7 @@ class GPXTool(tkinter.Tk):
     gpx_read = None
     mercator = None
     screen_points = None
-    points = []
+    gpx_points = []
 
     lat_box = None
     lon_box = None
@@ -104,13 +106,13 @@ class GPXTool(tkinter.Tk):
         self.mercator = globalmaptiles.GlobalMercator()
 
         self.gpx_read = gpxread.GPXRead()
-        self.points = self.gpx_read.read_points()
+        self.gpx_points = self.gpx_read.read_points()
 
         self.screen_points = screen_points.ScreenPoints(self, self.background)
 
         # Center the map on the initial coordinates of the track
         starting_point = self.gpx_read.get_starting_point()
-        self.wgs84_coordinates = WGS84Coordinates(starting_point["lat"], starting_point["lon"])
+        self.wgs84_coordinates = WGS84Coordinates(lat=starting_point.get_lat(), lon=starting_point.get_lon())
         self.zoom = 17
         self.set_entry_variable(self.wgs84_coordinates, self.zoom)
 
@@ -173,43 +175,72 @@ class GPXTool(tkinter.Tk):
 
     def press_button(self, event):
         print("clicked at", event.x, event.y)
+
+        screen_point_found = self.screen_points.point_at(event.x, event.y)
+        if screen_point_found:
+            self.motion_mode = self.MOVE_POINT_MODE
+            self.screen_point_selected = screen_point_found
+        else:
+            self.motion_mode = self.PAN_MODE
+
         self.pressed_canvas_coordinates.y = event.y
         self.pressed_canvas_coordinates.x = event.x
         self.background.focus_set()
 
     def motion_button(self, event):
         print("motion at", event.x, event.y)
-        self.moved_canvas_coordinates.y = + (event.y - self.pressed_canvas_coordinates.y)
-        self.moved_canvas_coordinates.x = - (event.x - self.pressed_canvas_coordinates.x)
-        old_coordinates = WGS84Coordinates(self.wgs84_coordinates.lat, self.wgs84_coordinates.lon)
 
-        new_wsg84_coordinates = WGS84Coordinates(0, 0)
-        new_wsg84_coordinates.lon = old_coordinates.lon + float(self.moved_canvas_coordinates.x) * self.scale_y
-        new_wsg84_coordinates.lat = old_coordinates.lat + float(self.moved_canvas_coordinates.y) * self.scale_x
+        if self.motion_mode == self.PAN_MODE:
+            self.moved_canvas_coordinates.y = + (event.y - self.pressed_canvas_coordinates.y)
+            self.moved_canvas_coordinates.x = - (event.x - self.pressed_canvas_coordinates.x)
+            old_coordinates = WGS84Coordinates(self.wgs84_coordinates.lat, self.wgs84_coordinates.lon)
 
-        self.lat_box.config(text="Lat:" + str(new_wsg84_coordinates.lat))
-        self.lon_box.config(text="Lon:" + str(new_wsg84_coordinates.lon))
+            new_wsg84_coordinates = WGS84Coordinates(0, 0)
+            new_wsg84_coordinates.lon = old_coordinates.lon + float(self.moved_canvas_coordinates.x) * self.scale_y
+            new_wsg84_coordinates.lat = old_coordinates.lat + float(self.moved_canvas_coordinates.y) * self.scale_x
 
-        self.background.delete(tkinter.ALL)
-        self.background.create_image(self.canvas_width / 2 - self.moved_canvas_coordinates.x,
-                                     self.canvas_height / 2 + self.moved_canvas_coordinates.y,
-                                     image=self.image)
+            self.lat_box.config(text="Lat:" + str(new_wsg84_coordinates.lat))
+            self.lon_box.config(text="Lon:" + str(new_wsg84_coordinates.lon))
+
+            self.background.delete(tkinter.ALL)
+            self.background.create_image(self.canvas_width / 2 - self.moved_canvas_coordinates.x,
+                                         self.canvas_height / 2 + self.moved_canvas_coordinates.y,
+                                         image=self.image)
+
+        if self.motion_mode == self.MOVE_POINT_MODE:
+            self.moved_canvas_coordinates.y = - event.y
+            self.moved_canvas_coordinates.x = + event.x
+
+            old_coordinates = WGS84Coordinates(self.bottom, self.left) # self.wgs84_coordinates.lat, self.wgs84_coordinates.lon)
+
+            new_wsg84_coordinates = WGS84Coordinates(0, 0)
+            new_wsg84_coordinates.lon = old_coordinates.lon + float(self.moved_canvas_coordinates.x) * self.scale_y
+            new_wsg84_coordinates.lat = old_coordinates.lat + float(self.moved_canvas_coordinates.y) * self.scale_x
+
+            self.background.delete(self.screen_point_selected.get_rectangle())
+
+            self.screen_point_selected.get_gpx_point().lat = new_wsg84_coordinates.lat
+            self.screen_point_selected.get_gpx_point().lon = new_wsg84_coordinates.lon
+
+            self.screen_point_selected = self.draw_point(self.screen_point_selected.get_gpx_point())
 
     def release_button(self, event):
         print("released at", event.x, event.y)
-        self.moved_canvas_coordinates.y = + (event.y - self.pressed_canvas_coordinates.y)
-        self.moved_canvas_coordinates.x = - (event.x - self.pressed_canvas_coordinates.x)
 
-        old_coordinates = WGS84Coordinates(self.wgs84_coordinates.lat, self.wgs84_coordinates.lon)
+        if self.motion_mode == self.PAN_MODE:
+            self.moved_canvas_coordinates.y = + (event.y - self.pressed_canvas_coordinates.y)
+            self.moved_canvas_coordinates.x = - (event.x - self.pressed_canvas_coordinates.x)
 
-        new_wsg84_coordinates = WGS84Coordinates(0, 0)
-        new_wsg84_coordinates.lon = old_coordinates.lon + float(self.moved_canvas_coordinates.x) * self.scale_y
-        new_wsg84_coordinates.lat = old_coordinates.lat + float(self.moved_canvas_coordinates.y) * self.scale_x
+            old_coordinates = WGS84Coordinates(self.wgs84_coordinates.lat, self.wgs84_coordinates.lon)
 
-        self.set_entry_variable(new_wsg84_coordinates, self.zoom)
-        self.update_wgs84_coordinates_and_download_map(new_wsg84_coordinates, self.zoom)
-        self.calculate_scale()
-        self.draw_points()
+            new_wsg84_coordinates = WGS84Coordinates(0, 0)
+            new_wsg84_coordinates.lon = old_coordinates.lon + float(self.moved_canvas_coordinates.x) * self.scale_y
+            new_wsg84_coordinates.lat = old_coordinates.lat + float(self.moved_canvas_coordinates.y) * self.scale_x
+
+            self.set_entry_variable(new_wsg84_coordinates, self.zoom)
+            self.update_wgs84_coordinates_and_download_map(new_wsg84_coordinates, self.zoom)
+            self.calculate_scale()
+            self.draw_points()
 
     def press_right_button(self, event):
         print("Right clicked at", event.x, event.y)
@@ -230,11 +261,18 @@ class GPXTool(tkinter.Tk):
     def motion(self, event):
         print("simple motion at:", event.x, event.y)
 
-        point_found = self.screen_points.point_at(event.x, event.y)
-        if point_found:
-            self.background.delete(point_found["rectangle"])
-            point_found["gpxpoint"]["lat"] += 0.0001
-            self.draw_point(point_found["gpxpoint"])
+        screen_point_found = self.screen_points.point_at(event.x, event.y)
+        if screen_point_found:
+            # Fill to green point under cursor
+            self.background.itemconfigure(screen_point_found.get_rectangle(), fill="#00ff00")
+
+        if self.screen_point_highlighted and self.screen_point_highlighted != screen_point_found:
+            # Fill to red previous highlighted point (if existed)
+            self.background.itemconfigure(self.screen_point_highlighted.get_rectangle(), fill="#ff0000")
+
+        if screen_point_found:
+            # Update current highlighted point
+            self.screen_point_highlighted = screen_point_found
 
         self.moved_canvas_coordinates.y = - event.y
         self.moved_canvas_coordinates.x = + event.x
@@ -253,7 +291,7 @@ class GPXTool(tkinter.Tk):
         lat = float(old_coordinates[0])
         lon = float(old_coordinates[1])
         tz = float(old_coordinates[2])
-        mx, my = self.mercator.LatLonToMeters(lat, lon)
+        mx, my = self.mercator.LatLonToMeters(lat=lat, lon=lon)
         current_tile_x, current_tile_y = self.mercator.MetersToTile(mx, my, tz)
         wgs_bounds = self.mercator.TileLatLonBounds(current_tile_x, current_tile_y, tz)
 
@@ -326,19 +364,18 @@ class GPXTool(tkinter.Tk):
 
     def draw_points(self):
         self.screen_points.clear()
-        for point in self.points:
-            self.draw_point(point)
+        for gpx_point in self.gpx_points:
+            self.draw_point(gpx_point)
 
-    def draw_point(self, point):
-            old_lat = self.wgs84_coordinates.lat
-            old_lon = self.wgs84_coordinates.lon
-
-            lon = float(point["lon"])
-            lat = float(point["lat"])
-            if self.left < lon < self.right and self.top < lat < self.bottom:
-                x_offset = self.canvas_width / 2 + (lon - old_lon) / self.scale_y
-                y_offset = self.canvas_height / 2 + (old_lat - lat) / self.scale_x
-                self.screen_points.update(point, x_offset, y_offset)
+    def draw_point(self, gpx_point):
+        old_lat = self.wgs84_coordinates.lat
+        old_lon = self.wgs84_coordinates.lon
+        lon = gpx_point.get_lon()
+        lat = gpx_point.get_lat()
+        if self.left < lon < self.right and self.top < lat < self.bottom:
+            x_offset = self.canvas_width / 2 + (lon - old_lon) / self.scale_y
+            y_offset = self.canvas_height / 2 + (old_lat - lat) / self.scale_x
+            return self.screen_points.update(gpx_point, x_offset, y_offset)
 
     @staticmethod
     def find(lst, key, value):
