@@ -34,6 +34,7 @@ class GPXRead:
     def read_points(self):
 
         xml_data_file = "/Users/isidro/Desktop/mine/tmp_track/activity_37192771.gpx"
+        xml_data_file = "/Users/isidro/Downloads/ubi-casa.gpx"
         xml_data_file_content = open(xml_data_file, "rb").read()
 
         xml_data = minidom.parseString(xml_data_file_content)
@@ -43,7 +44,11 @@ class GPXRead:
         for item in item_list:
             lat = float(item.attributes["lat"].value)
             lon = float(item.attributes["lon"].value)
-            time = datetime.datetime.strptime(item.getElementsByTagName('time')[0].childNodes[0].data, "%Y-%m-%dT%H:%M:%S.%fZ")
+            time = None
+            try:
+                time = datetime.datetime.strptime(item.getElementsByTagName('time')[0].childNodes[0].data, "%Y-%m-%dT%H:%M:%S.%fZ")
+            except:
+                pass
             self.points.append(GPXPoint(lat, lon, time))
 
         return self.points
@@ -111,6 +116,7 @@ class GPXRead:
         last_lat = None
         last_lon = None
         last_time = None
+        point_time = datetime.timedelta(0)
 
         for point in self.points:
             lat = point.get_lat()
@@ -119,7 +125,8 @@ class GPXRead:
             if last_lat:
                 point_distance = self.distance_on_unit_sphere(lat, lon, last_lat, last_lon)
                 # point_distance = (int(point_distance*10 + 0.5))/10.0
-                point_time = time - last_time
+                if time and last_time:
+                    point_time = time - last_time
                 total_distance += point_distance
                 total_time += point_time
                 #print(point_time)
