@@ -121,7 +121,7 @@ class GPXTool(tkinter.Tk):
         self.gpx_read = gpxread.GPXRead()
         self.gpx_points = self.gpx_read.read_points()
 
-        self.screen_points = screen_points.ScreenPoints(self, self.background)
+        self.screen_points = screen_points.ScreenPoints(self, self.background, len(self.gpx_read.points))
 
         # Center the map on the initial coordinates of the track
         starting_point = self.gpx_read.get_starting_point()
@@ -158,6 +158,10 @@ class GPXTool(tkinter.Tk):
         self.speed_box = tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Speed:" + "dummy")
         self.speed_box.config(anchor="w")
         self.speed_box.grid(column=0, row=8, pady=0, padx=0)
+
+        self.number_box = tkinter.Label(self, height=1, width=64, bg="#8080ff", text="Point #:" + "dummy")
+        self.number_box.config(anchor="w")
+        self.number_box.grid(column=0, row=9, pady=0, padx=0)
 
         self.update_wgs84_coordinates_from_text_and_download_map(self.entryVariable.get().split(","))
 
@@ -202,7 +206,7 @@ class GPXTool(tkinter.Tk):
         print("clicked at", event.x, event.y)
 
         screen_point_found = self.screen_points.point_at(event.x, event.y)
-        if screen_point_found:
+        if screen_point_found != -1:
             self.motion_mode = self.MOVE_POINT_MODE
             self.screen_point_selected = screen_point_found
         else:
@@ -213,7 +217,7 @@ class GPXTool(tkinter.Tk):
         self.background.focus_set()
 
     def motion_button(self, event):
-        print("motion at", event.x, event.y)
+        #print("motion at", event.x, event.y)
 
         if self.motion_mode == self.PAN_MODE:
             self.moved_canvas_coordinates.y = + (event.y - self.pressed_canvas_coordinates.y)
@@ -242,12 +246,12 @@ class GPXTool(tkinter.Tk):
             new_wsg84_coordinates.lon = old_coordinates.lon + float(self.moved_canvas_coordinates.x) * self.scale_y
             new_wsg84_coordinates.lat = old_coordinates.lat + float(self.moved_canvas_coordinates.y) * self.scale_x
 
-            self.background.delete(self.screen_point_selected.get_rectangle())
+            self.background.delete(self.screen_points.points[self.screen_point_selected].get_rectangle())
 
-            self.screen_point_selected.get_gpx_point().lat = new_wsg84_coordinates.lat
-            self.screen_point_selected.get_gpx_point().lon = new_wsg84_coordinates.lon
+            self.gpx_points[self.screen_points.points[self.screen_point_selected].get_gpx_point_number()].lat = new_wsg84_coordinates.lat
+            self.gpx_points[self.screen_points.points[self.screen_point_selected].get_gpx_point_number()].lon = new_wsg84_coordinates.lon
 
-            self.screen_point_selected = self.draw_point(self.screen_point_selected.get_gpx_point())
+            self.draw_point(self.screen_point_selected)
 
             self.update_point_data(self.screen_point_selected)
 
@@ -292,15 +296,15 @@ class GPXTool(tkinter.Tk):
 #        print("simple motion at:", event.x, event.y)
 
         screen_point_found = self.screen_points.point_at(event.x, event.y)
-        if screen_point_found:
+        if screen_point_found != -1:
             # Fill to green point under cursor
-            self.background.itemconfigure(screen_point_found.get_rectangle(), fill="#00ff00")
+            self.background.itemconfigure(self.screen_points.points[screen_point_found].get_rectangle(), fill="#00ff00")
 
         if self.screen_point_highlighted and self.screen_point_highlighted != screen_point_found:
             # Fill to red previous highlighted point (if existed)
-            self.background.itemconfigure(self.screen_point_highlighted.get_rectangle(), fill="#ff0000")
+            self.background.itemconfigure(self.screen_points.points[self.screen_point_highlighted].get_rectangle(), fill="#ff0000")
 
-        if screen_point_found:
+        if screen_point_found != -1:
             # Update current highlighted point
             self.screen_point_highlighted = screen_point_found
             self.update_point_data(screen_point_found)
@@ -362,20 +366,27 @@ class GPXTool(tkinter.Tk):
         request += "&format=gif&maptype=hybrid&sensor=false"
         request += "&key=AIzaSyBOP8yEyxoR2jYdYBf4th6hSgdaUeWsBx0"
         print(request)
-        urllib.request.urlretrieve(request, "../tmp/caca.gif")
-        image = tkinter.PhotoImage(file="../tmp/caca.gif")
-        self.image = image
+        try:
+            urllib.request.urlretrieve(request, "../tmp/caca.gif")
+            image = tkinter.PhotoImage(file="../tmp/caca.gif")
+            self.image = image
+        except:
+            self.image = None
+            pass
         self.background.delete(tkinter.ALL)
-        self.background.create_image(self.canvas_width / 2, self.canvas_height / 2, image=self.image)
+
+        if self.image:
+            self.background.create_image(self.canvas_width / 2, self.canvas_height / 2, image=self.image)
 
 #        self.lat_box.config(text=self.wgs84_coordinates.lat)
 #        self.lon_box.config(text=self.wgs84_coordinates.lon)
 
     def update_point_data(self, screen_point):
-        time, distance = self.gpx_read.calculate_point_data(screen_point.get_gpx_point())
+        time, distance = self.gpx_read.calculate_point_data(self.screen_points.points[screen_point].get_gpx_point_number())
         self.dist_box.config(text="Dist: " + helpers.to_decimal(distance, 3))
         self.time_box.config(text="Time: " + str(time))
         self.speed_box.config(text="Speed: " + helpers.to_decimal(distance / time.seconds) + " m/s")
+        self.number_box.config(text="Point #" + helpers.to_decimal(self.screen_points.points[screen_point].get_gpx_point_number(), 0))
 
     def change_zoom(self, offset):
         new_coordinates = self.entryVariable.get().split(",")
@@ -401,25 +412,24 @@ class GPXTool(tkinter.Tk):
 
     def draw_points(self):
         self.screen_points.clear()
-        for gpx_point in self.gpx_points:
-            self.draw_point(gpx_point)
+        for gpx_point_num in range(len(self.gpx_points)):
+            self.draw_point(-1, gpx_point_num)
 
-    def draw_point(self, gpx_point):
+    def draw_point(self, screen_point_number, gpx_point_number = None):
         old_lat = self.wgs84_coordinates.lat
         old_lon = self.wgs84_coordinates.lon
-        lon = gpx_point.get_lon()
-        lat = gpx_point.get_lat()
+
+        if screen_point_number == -1:
+            pass
+        else:
+            gpx_point_number = self.screen_points.points[screen_point_number].get_gpx_point_number()
+
+        lon = self.gpx_points[gpx_point_number].lon
+        lat = self.gpx_points[gpx_point_number].lat
         if self.left < lon < self.right and self.top < lat < self.bottom:
             x_offset = self.canvas_width / 2 + (lon - old_lon) / self.scale_y
             y_offset = self.canvas_height / 2 + (old_lat - lat) / self.scale_x
-            return self.screen_points.update(gpx_point, x_offset, y_offset)
-
-    @staticmethod
-    def find(lst, key, value):
-        for i, dic in enumerate(lst):
-            if dic[key] == value:
-                return i
-        return -1
+            return self.screen_points.update(screen_point_number, gpx_point_number, x_offset, y_offset)
 
 if __name__ == "__main__":
     app = GPXTool(None)

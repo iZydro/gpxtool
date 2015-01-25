@@ -91,19 +91,26 @@ class GPXRead:
         return arc * 6378135.0
 
     def calculate_point_data(self, point):
-        lat = point.get_lat()
-        lon = point.get_lon()
-        time = point.time
+        lat = self.points[point].get_lat()
+        lon = self.points[point].get_lon()
+        time = self.points[point].time
 
-        index_point = self.points.index(point)
-        prev_point = self.points[index_point - 1]
+        index_point = point
+        prev_point = index_point - 1
 
-        last_lat = prev_point.get_lat()
-        last_lon = prev_point.get_lon()
-        last_time = prev_point.time
+        point_time = datetime.timedelta(seconds=1)
+        point_distance = 0
 
-        point_distance = self.distance_on_unit_sphere(lat, lon, last_lat, last_lon)
-        point_time = time - last_time
+        if prev_point >= 0:
+            last_lat = self.points[prev_point].get_lat()
+            last_lon = self.points[prev_point].get_lon()
+            last_time = self.points[prev_point].time
+
+            point_distance = self.distance_on_unit_sphere(lat, lon, last_lat, last_lon)
+            point_time = time - last_time
+
+        if point_time.seconds == 0:
+            point_time = datetime.timedelta(seconds=1)
 
         return point_time, point_distance
 
@@ -127,13 +134,13 @@ class GPXRead:
             time = point.time
             if last_lat:
                 point_distance = self.distance_on_unit_sphere(lat, lon, last_lat, last_lon)
-                # point_distance = (int(point_distance*10 + 0.5))/10.0
+
                 if time and last_time:
                     point_time = time - last_time
                 total_distance += point_distance
                 total_time += point_time
-                #print(point_time)
-            print("Point #" + str(num_point) + " => acc:" + str(total_distance) + " this:" + str(point_distance) + " time: " + str(total_time))
+
+            #print("Point #" + str(num_point) + " => acc:" + str(total_distance) + " this:" + str(point_distance) + " time: " + str(total_time))
 
             last_lat = lat
             last_lon = lon
@@ -141,7 +148,7 @@ class GPXRead:
 
             num_point += 1
 
-        print("Total distance: " + str(total_distance))
+        #print("Total distance: " + str(total_distance))
         return total_distance
 
 
