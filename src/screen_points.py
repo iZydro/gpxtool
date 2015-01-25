@@ -24,6 +24,7 @@ class ScreenPoint:
 class ScreenPoints:
 
     points = []
+    highlighted = -1
     rectangles = []
     parent = None
     background = None
@@ -40,6 +41,7 @@ class ScreenPoints:
 
     def clear(self):
         self.points = []
+        self.highlighted = -1
 
     def point_at(self, x, y) -> int:
         counter = 0
@@ -51,7 +53,7 @@ class ScreenPoints:
             counter += 1
         return -1
 
-    def update(self, screen_point_number, gpx_point_number, x_offset, y_offset):
+    def update(self, screen_point_number, gpx_point_number, x_offset, y_offset) -> int:
 
         rectangle = self.background.create_rectangle(
             x_offset - 4,

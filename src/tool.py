@@ -4,10 +4,10 @@
 import tkinter
 import os
 import urllib.request
+import configparser
 
 import globalmaptiles
 import gpxread
-from gpxread import GPXPoint
 import screen_points
 import helpers
 
@@ -58,7 +58,6 @@ class GPXTool(tkinter.Tk):
     moved_canvas_coordinates = None
     motion_mode = PAN_MODE
     screen_point_selected = None
-    screen_point_highlighted = -1
 
     wgs84_coordinates = None
     zoom = 1
@@ -70,9 +69,12 @@ class GPXTool(tkinter.Tk):
     mercator = None
     screen_points = None
     gpx_points = []
+    gpx_points_number = 0
 
     lat_box = None
     lon_box = None
+
+    config = None
 
     def __init__(self, parent):
 
@@ -80,6 +82,15 @@ class GPXTool(tkinter.Tk):
             os.stat("../tmp")
         except:
             os.mkdir("../tmp")
+
+        config = configparser.ConfigParser()
+        config.read("../tmp/config.ini")
+        if "files" not in config:
+            config.add_section("files")
+        if "last_file" not in config["files"]:
+            config["files"]["last_file"] = "/Users/isidro/Desktop/mine/tmp_track/activity_37192771.gpx"
+        with open('../tmp/config.ini', 'w') as configfile:
+            config.write(configfile)
 
         tkinter.Tk.__init__(self, parent)
 
@@ -119,7 +130,8 @@ class GPXTool(tkinter.Tk):
         self.mercator = globalmaptiles.GlobalMercator()
 
         self.gpx_read = gpxread.GPXRead()
-        self.gpx_points = self.gpx_read.read_points()
+        self.gpx_points = self.gpx_read.read_points(config["files"]["last_file"])
+        self.gpx_points_number = len(self.gpx_points)
 
         self.screen_points = screen_points.ScreenPoints(self, self.background, len(self.gpx_read.points))
 
@@ -217,7 +229,6 @@ class GPXTool(tkinter.Tk):
         self.background.focus_set()
 
     def motion_button(self, event):
-        #print("motion at", event.x, event.y)
 
         if self.motion_mode == self.PAN_MODE:
             self.moved_canvas_coordinates.y = + (event.y - self.pressed_canvas_coordinates.y)
@@ -259,7 +270,6 @@ class GPXTool(tkinter.Tk):
             self.distance_box.config(text="Dist:" + str(total_distance))
 
     def release_button(self, event):
-        print("released at", event.x, event.y)
 
         if self.motion_mode == self.PAN_MODE:
             self.moved_canvas_coordinates.y = + (event.y - self.pressed_canvas_coordinates.y)
@@ -277,7 +287,7 @@ class GPXTool(tkinter.Tk):
             self.draw_points()
 
     def press_right_button(self, event):
-        print("Right clicked at", event.x, event.y)
+
         self.moved_canvas_coordinates.y = - (event.y - self.canvas_height / 2)
         self.moved_canvas_coordinates.x = + (event.x - self.canvas_width / 2)
 
@@ -293,20 +303,19 @@ class GPXTool(tkinter.Tk):
         self.draw_points()
 
     def motion(self, event):
-#        print("simple motion at:", event.x, event.y)
 
         screen_point_found = self.screen_points.point_at(event.x, event.y)
         if screen_point_found != -1:
             # Fill to green point under cursor
             self.background.itemconfigure(self.screen_points.points[screen_point_found].get_rectangle(), fill="#00ff00")
 
-        if self.screen_point_highlighted != -1 and self.screen_point_highlighted != screen_point_found:
+        if self.screen_points.highlighted != -1 and self.screen_points.highlighted != screen_point_found:
             # Fill to red previous highlighted point (if existed)
-            self.background.itemconfigure(self.screen_points.points[self.screen_point_highlighted].get_rectangle(), fill="#ff0000")
+            self.background.itemconfigure(self.screen_points.points[self.screen_points.highlighted].get_rectangle(), fill="#ff0000")
 
         if screen_point_found != -1:
             # Update current highlighted point
-            self.screen_point_highlighted = screen_point_found
+            self.screen_points.highlighted = screen_point_found
             self.update_point_data(screen_point_found)
 
         self.moved_canvas_coordinates.y = - event.y
@@ -411,18 +420,19 @@ class GPXTool(tkinter.Tk):
         self.draw_points()
 
     def draw_points(self):
-        self.screen_point_highlighted = -1
         self.screen_points.clear()
-        for gpx_point_num in range(len(self.gpx_points)):
+        for gpx_point_num in range(self.gpx_points_number):
             self.draw_point(-1, gpx_point_num)
 
-    def draw_point(self, screen_point_number, gpx_point_number = None):
+    def draw_point(self, screen_point_number, gpx_point_number=None):
         old_lat = self.wgs84_coordinates.lat
         old_lon = self.wgs84_coordinates.lon
 
         if screen_point_number == -1:
+            # Use the new GPX point passed as parameter
             pass
         else:
+            # Get GPX point from already existing Screen Point
             gpx_point_number = self.screen_points.points[screen_point_number].get_gpx_point_number()
 
         lon = self.gpx_points[gpx_point_number].lon

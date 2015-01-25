@@ -31,9 +31,9 @@ class GPXRead:
         self.points = []
         self.mercator = globalmaptiles.GlobalMercator()
 
-    def read_points(self):
+    def read_points(self, xml_data_file):
 
-        xml_data_file = "/Users/isidro/Desktop/mine/tmp_track/activity_37192771.gpx"
+        #xml_data_file = "/Users/isidro/Desktop/mine/tmp_track/activity_37192771.gpx"
         #xml_data_file = "/Users/isidro/Downloads/ubi-casa.gpx"
         #xml_data_file = "c://Users//Leonardo//workspace//gpxtool//data/RK_gpx _2014-12-31_1732.gpx"
         xml_data_file_content = open(xml_data_file, "rb").read()
@@ -60,7 +60,7 @@ class GPXRead:
 
         return self.points[0]
 
-    def distance_on_unit_sphere(self, lat1, long1, lat2, long2):
+    def distance_on_unit_sphere(self, lat1, long1, lat2, long2) -> float:
 
         # Convert latitude and longitude to
         # spherical coordinates in radians.
