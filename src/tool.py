@@ -249,6 +249,8 @@ class GPXTool(tkinter.Tk):
 
             self.screen_point_selected = self.draw_point(self.screen_point_selected.get_gpx_point())
 
+            self.update_point_data(self.screen_point_selected)
+
             total_distance = self.gpx_read.calculate_total_distance()
             self.distance_box.config(text="Dist:" + str(total_distance))
 
@@ -301,10 +303,7 @@ class GPXTool(tkinter.Tk):
         if screen_point_found:
             # Update current highlighted point
             self.screen_point_highlighted = screen_point_found
-            time, distance = self.gpx_read.calculate_point_data(screen_point_found.get_gpx_point())
-            self.dist_box.config(text="Dist: " + helpers.to_decimal(distance))
-            self.time_box.config(text="Time: " + str(time))
-            self.speed_box.config(text="Speed: " + helpers.to_decimal(distance / time.seconds) + " m/s")
+            self.update_point_data(screen_point_found)
 
         self.moved_canvas_coordinates.y = - event.y
         self.moved_canvas_coordinates.x = + event.x
@@ -371,6 +370,12 @@ class GPXTool(tkinter.Tk):
 
 #        self.lat_box.config(text=self.wgs84_coordinates.lat)
 #        self.lon_box.config(text=self.wgs84_coordinates.lon)
+
+    def update_point_data(self, screen_point):
+        time, distance = self.gpx_read.calculate_point_data(screen_point.get_gpx_point())
+        self.dist_box.config(text="Dist: " + helpers.to_decimal(distance, 3))
+        self.time_box.config(text="Time: " + str(time))
+        self.speed_box.config(text="Speed: " + helpers.to_decimal(distance / time.seconds) + " m/s")
 
     def change_zoom(self, offset):
         new_coordinates = self.entryVariable.get().split(",")
