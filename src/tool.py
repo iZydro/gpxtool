@@ -9,6 +9,7 @@ import globalmaptiles
 import gpxread
 from gpxread import GPXPoint
 import screen_points
+import helpers
 
 
 class WGS84Coordinates():
@@ -301,9 +302,9 @@ class GPXTool(tkinter.Tk):
             # Update current highlighted point
             self.screen_point_highlighted = screen_point_found
             time, distance = self.gpx_read.calculate_point_data(screen_point_found.get_gpx_point())
-            self.dist_box.config(text="Dist:" + str(time))
-            self.time_box.config(text="Time:" + str(distance))
-            self.speed_box.config(text="Speed:" + str(distance / time.seconds) + "m/s")
+            self.dist_box.config(text="Dist: " + helpers.to_decimal(distance))
+            self.time_box.config(text="Time: " + str(time))
+            self.speed_box.config(text="Speed: " + helpers.to_decimal(distance / time.seconds) + " m/s")
 
         self.moved_canvas_coordinates.y = - event.y
         self.moved_canvas_coordinates.x = + event.x

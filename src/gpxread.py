@@ -35,6 +35,7 @@ class GPXRead:
 
         xml_data_file = "/Users/isidro/Desktop/mine/tmp_track/activity_37192771.gpx"
         xml_data_file = "/Users/isidro/Downloads/ubi-casa.gpx"
+        xml_data_file = "c://Users//Leonardo//workspace//gpxtool//data/RK_gpx _2014-12-31_1732.gpx"
         xml_data_file_content = open(xml_data_file, "rb").read()
 
         xml_data = minidom.parseString(xml_data_file_content)
@@ -46,9 +47,11 @@ class GPXRead:
             lon = float(item.attributes["lon"].value)
             time = None
             try:
-                time = datetime.datetime.strptime(item.getElementsByTagName('time')[0].childNodes[0].data, "%Y-%m-%dT%H:%M:%S.%fZ")
+                #time = datetime.datetime.strptime(item.getElementsByTagName('time')[0].childNodes[0].data, "%Y-%m-%dT%H:%M:%S.%fZ")
+                time = datetime.datetime.strptime(item.getElementsByTagName('time')[0].childNodes[0].data, "%Y-%m-%dT%H:%M:%SZ")
             except:
                 pass
+            print(time)
             self.points.append(GPXPoint(lat, lon, time))
 
         return self.points
