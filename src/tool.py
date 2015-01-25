@@ -58,7 +58,7 @@ class GPXTool(tkinter.Tk):
     moved_canvas_coordinates = None
     motion_mode = PAN_MODE
     screen_point_selected = None
-    screen_point_highlighted = None
+    screen_point_highlighted = -1
 
     wgs84_coordinates = None
     zoom = 1
@@ -300,7 +300,7 @@ class GPXTool(tkinter.Tk):
             # Fill to green point under cursor
             self.background.itemconfigure(self.screen_points.points[screen_point_found].get_rectangle(), fill="#00ff00")
 
-        if self.screen_point_highlighted and self.screen_point_highlighted != screen_point_found:
+        if self.screen_point_highlighted != -1 and self.screen_point_highlighted != screen_point_found:
             # Fill to red previous highlighted point (if existed)
             self.background.itemconfigure(self.screen_points.points[self.screen_point_highlighted].get_rectangle(), fill="#ff0000")
 
@@ -411,6 +411,7 @@ class GPXTool(tkinter.Tk):
         self.draw_points()
 
     def draw_points(self):
+        self.screen_point_highlighted = -1
         self.screen_points.clear()
         for gpx_point_num in range(len(self.gpx_points)):
             self.draw_point(-1, gpx_point_num)
