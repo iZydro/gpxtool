@@ -2,6 +2,7 @@ from xml.dom import minidom
 import globalmaptiles
 import math
 import datetime
+import os
 
 
 class GPXPoint:
@@ -36,6 +37,9 @@ class GPXRead:
         #xml_data_file = "/Users/isidro/Desktop/mine/tmp_track/activity_37192771.gpx"
         #xml_data_file = "/Users/isidro/Downloads/ubi-casa.gpx"
         #xml_data_file = "c://Users//Leonardo//workspace//gpxtool//data/RK_gpx _2014-12-31_1732.gpx"
+
+        xml_data_file = os.getcwd() + "/../data/Move_2015_02_15_08_46_14_Running.gpx"
+
         xml_data_file_content = open(xml_data_file, "rb").read()
 
         xml_data = minidom.parseString(xml_data_file_content)
@@ -46,11 +50,15 @@ class GPXRead:
             lat = float(item.attributes["lat"].value)
             lon = float(item.attributes["lon"].value)
             time = None
+            time_str = item.getElementsByTagName('time')[0].childNodes[0].data
+
             try:
-                time = datetime.datetime.strptime(item.getElementsByTagName('time')[0].childNodes[0].data, "%Y-%m-%dT%H:%M:%S.%fZ")
-                #time = datetime.datetime.strptime(item.getElementsByTagName('time')[0].childNodes[0].data, "%Y-%m-%dT%H:%M:%SZ")
+                time = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+            except ValueError:
+                time = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%SZ")
             except:
-                pass
+                print("Cannot understand time value")
+                exit(0)
             print(time)
             self.points.append(GPXPoint(lat, lon, time))
 

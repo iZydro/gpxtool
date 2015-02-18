@@ -366,7 +366,7 @@ class GPXTool(tkinter.Tk):
         self.wgs84_coordinates.lon = float(text_array[1])
         self.zoom = int(text_array[2])
 
-        request = "http://maps.google.com/maps/api/staticmap?center="
+        request = "https://maps.google.com/maps/api/staticmap?center="
         request += str(text_array[0]) + "," + str(text_array[1])
         request += "&zoom=" + str(text_array[2])
         request += "&size=" + str(self.canvas_width)
@@ -379,7 +379,8 @@ class GPXTool(tkinter.Tk):
             urllib.request.urlretrieve(request, "../tmp/caca.gif")
             image = tkinter.PhotoImage(file="../tmp/caca.gif")
             self.image = image
-        except:
+        except Exception as e:
+            print("Exception!" + str(e))
             self.image = None
             pass
         self.background.delete(tkinter.ALL)
